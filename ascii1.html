@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASCII Signal Animation</title>
+
+<style>
+    html, body {
+        margin: 0;
+        overflow: hidden;
+        background: #fafafa;
+        width: 100%;
+        height: 100%;
+    }
+
+    canvas {
+        display: block;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const CHARS = ['+', ':', '-', '=', 'x', 'X', '.'];
+
+let cols, rows;
+const cellSize = 14;
+let glyphs = [];
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    cols = Math.ceil(canvas.width / cellSize);
+    rows = Math.ceil(canvas.height / cellSize);
+
+    glyphs = [];
+
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            glyphs.push({
+                gx: x,
+                gy: y,
+                char: CHARS[Math.floor(Math.random() * CHARS.length)],
+                seed: Math.random() * 1000
+            });
+        }
+    }
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+function smoothstep(a, b, t) {
+    t = Math.max(0, Math.min(1, (t - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+}
+
+function draw(time) {
+    time *= 0.001;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = "12px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const cycle = (time * 0.5) % 1;
+
+    const leftWave = cycle;
+    const rightWave = cycle;
+
+    glyphs.forEach(g => {
+
+        const px = g.gx * cellSize + cellSize / 2;
+        const py = g.gy * cellSize + cellSize / 2;
+
+        const nx = px / canvas.width;
+        const ny = py / canvas.height;
+
+        const band =
+            0.5 +
+            0.5 *
+            Math.sin(
+                ny * 10 +
+                g.seed +
+                time * 2
+            );
+
+        const leftDist = Math.abs(nx - leftWave);
+        const rightDist = Math.abs((1 - nx) - rightWave);
+
+        const leftGlow = 1 - smoothstep(0, 0.18, leftDist);
+        const rightGlow = 1 - smoothstep(0, 0.18, rightDist);
+
+        const intensity =
+            Math.max(leftGlow, rightGlow) *
+            band;
+
+        if (intensity < 0.02) return;
+
+        const alpha = intensity * 0.9;
+
+        ctx.fillStyle = `rgba(255,106,0,${alpha})`;
+
+
+        if (Math.random() < 0.015) {
+            g.char =
+                CHARS[
+                    Math.floor(Math.random() * CHARS.length)
+                ];
+        }
+
+        ctx.fillText(
+            g.char,
+            px,
+            py
+        );
+    });
+
+    requestAnimationFrame(draw);
+}
+
+requestAnimationFrame(draw);
+</script>
+
+</body>
+</html>
